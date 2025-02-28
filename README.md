@@ -29,7 +29,7 @@ This project implements a self-contained document scanning and matching system w
 - Manage all credit requests (view request details, approved credits, and status).
 - Approve or deny credit requests directly from the dashboard.
 
-### Bonus (Optional)
+### Upcoming
 - Future integration of AI-powered document matching.
 - Optionally, track user activity logs and export scan history as a text file.
 
