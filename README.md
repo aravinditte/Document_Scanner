@@ -25,6 +25,7 @@ This project implements a self-contained document scanning and matching system w
 - The system compares new uploads against existing files using a basic Jaccard similarity algorithm and returns matching documents.
 
 ### Admin Dashboard & Analytics
+- Admin Username : admin , Admin Password: admin
 - View user analytics: username, remaining credits, and total scans.
 - Manage all credit requests (view request details, approved credits, and status).
 - Approve or deny credit requests directly from the dashboard.
