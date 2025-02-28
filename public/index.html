@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Document Scanning System</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .hidden { display: none; }
+    form { margin-bottom: 20px; }
+    input, button, textarea { padding: 5px; margin: 5px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 5px; text-align: center; }
+    .message { color: green; }
+    .error { color: red; }
+    #adminPanel { border: 1px solid #aaa; padding: 10px; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <!-- Home Section -->
+  <div id="home">
+    <h1>Welcome to the Document Scanning System</h1>
+    <button id="goLogin">Login</button>
+    <button id="goRegister">Register</button>
+  </div>
+
+  <!-- Login Section -->
+  <div id="login" class="hidden">
+    <h1>Login</h1>
+    <form id="loginForm">
+      <input type="text" id="loginUsername" placeholder="Username" required>
+      <br>
+      <input type="password" id="loginPassword" placeholder="Password" required>
+      <br>
+      <button type="submit">Login</button>
+    </form>
+    <div id="loginMessage" class="message"></div>
+    <div id="loginError" class="error"></div>
+    <p>Don't have an account? <button id="gotoRegisterFromLogin">Register</button></p>
+    <button id="backHomeFromLogin">Back</button>
+  </div>
+
+  <!-- Registration Section -->
+  <div id="register" class="hidden">
+    <h1>Register</h1>
+    <form id="registerForm">
+      <input type="text" id="regUsername" placeholder="Username" required>
+      <br>
+      <input type="password" id="regPassword" placeholder="Password" required>
+      <br>
+      <button type="submit">Register</button>
+    </form>
+    <div id="registerMessage" class="message"></div>
+    <div id="registerError" class="error"></div>
+    <p>Already have an account? <button id="gotoLoginFromRegister">Login</button></p>
+    <button id="backHomeFromRegister">Back</button>
+  </div>
+
+  <!-- Dashboard Section -->
+  <div id="dashboard" class="hidden">
+    <h1>Dashboard</h1>
+    <div id="profile"></div>
+    <hr>
+    <h2>Upload Document for Scanning</h2>
+    <form id="uploadForm">
+      <input type="file" id="docFile" accept=".txt" required>
+      <br>
+      <button type="submit">Upload & Scan (Cost: 1 Credit)</button>
+    </form>
+    <div id="uploadMessage" class="message"></div>
+    <div id="scanResult"></div>
+    <hr>
+    <h2>Request Additional Credits</h2>
+    <form id="creditRequestForm">
+      <input type="number" id="requestedCredits" placeholder="Credits to request" min="1" required>
+      <button type="submit">Submit Request</button>
+    </form>
+    <div id="requestMessage" class="message"></div>
+    <hr>
+
+    <!-- Admin Panel -->
+    <div id="adminPanel" class="hidden">
+      <h2>Admin Dashboard</h2>
+      <!-- Analytics Section -->
+      <div id="analyticsSection">
+        <h3>User Analytics</h3>
+        <table id="userAnalyticsTable">
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>Credits</th>
+              <th>Total Scans</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- User analytics data will be loaded here -->
+          </tbody>
+        </table>
+      </div>
+      <hr>
+      <!-- Credit Requests Section -->
+      <div id="creditRequestsSection">
+        <h3>Credit Requests</h3>
+        <table id="creditRequestsTable">
+          <thead>
+            <tr>
+              <th>Request ID</th>
+              <th>Username</th>
+              <th>Credits Requested</th>
+              <th>Status</th>
+              <th>Approved Credits</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Admin credit requests will load here -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <button id="logoutBtn">Logout</button>
+    <div id="dashboardMessage" class="message"></div>
+    <div id="dashboardError" class="error"></div>
+  </div>
+
+  <script>
+    // Utility function for API calls.
+    async function apiCall(url, method = 'GET', data = null) {
+      const options = { method, headers: { 'Content-Type': 'application/json' } };
+      if (data) options.body = JSON.stringify(data);
+      const res = await fetch(url, options);
+      return res.json();
+    }
+
+    // View management
+    function showSection(sectionId) {
+      ['home', 'login', 'register', 'dashboard'].forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+      });
+      document.getElementById(sectionId).classList.remove('hidden');
+    }
+
+    // Navigation buttons
+    document.getElementById('goLogin').addEventListener('click', () => showSection('login'));
+    document.getElementById('goRegister').addEventListener('click', () => showSection('register'));
+    document.getElementById('backHomeFromLogin').addEventListener('click', () => showSection('home'));
+    document.getElementById('backHomeFromRegister').addEventListener('click', () => showSection('home'));
+    document.getElementById('gotoRegisterFromLogin').addEventListener('click', () => showSection('register'));
+    document.getElementById('gotoLoginFromRegister').addEventListener('click', () => showSection('login'));
+
+    // Handle Login
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      document.getElementById('loginMessage').textContent = '';
+      document.getElementById('loginError').textContent = '';
+      const username = document.getElementById('loginUsername').value;
+      const password = document.getElementById('loginPassword').value;
+      const res = await apiCall('/auth/login', 'POST', { username, password });
+      if (res.error) {
+        document.getElementById('loginError').textContent = res.error;
+      } else {
+        document.getElementById('loginMessage').textContent = res.message;
+        setTimeout(() => {
+          showSection('dashboard');
+          loadProfile();
+        }, 1000);
+      }
+    });
+
+    // Handle Registration
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      document.getElementById('registerMessage').textContent = '';
+      document.getElementById('registerError').textContent = '';
+      const username = document.getElementById('regUsername').value;
+      const password = document.getElementById('regPassword').value;
+      const res = await apiCall('/auth/register', 'POST', { username, password });
+      if (res.error) {
+        document.getElementById('registerError').textContent = res.error;
+      } else {
+        document.getElementById('registerMessage').textContent = res.message;
+      }
+    });
+
+    // Load Profile Data
+    async function loadProfile() {
+      const res = await apiCall('/user/profile');
+      if (res.error) {
+        document.getElementById('dashboardError').textContent = res.error;
+      } else {
+        const profileDiv = document.getElementById('profile');
+        profileDiv.innerHTML = `<p>Username: ${res.user.username}</p>
+                                <p>Credits: ${res.user.credits}</p>
+                                <p>Role: ${res.user.role}</p>`;
+        if (res.user.role === 'admin') {
+          document.getElementById('adminPanel').classList.remove('hidden');
+          loadAdminData();
+        } else {
+          document.getElementById('adminPanel').classList.add('hidden');
+        }
+      }
+    }
+
+    // Handle file upload for scanning
+    document.getElementById('uploadForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      document.getElementById('uploadMessage').textContent = '';
+      document.getElementById('dashboardError').textContent = '';
+      const fileInput = document.getElementById('docFile');
+      if (fileInput.files.length === 0) {
+        document.getElementById('dashboardError').textContent = 'Please select a file.';
+        return;
+      }
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+      reader.onload = async function(event) {
+        const documentContent = event.target.result;
+        const filename = file.name;
+        const res = await apiCall('/scanUpload', 'POST', { filename, documentContent });
+        if (res.error) {
+          document.getElementById('dashboardError').textContent = res.error;
+        } else {
+          document.getElementById('uploadMessage').textContent = res.message;
+          let matchHTML = '<h3>Matching Documents:</h3><ul>';
+          res.matches.forEach(match => {
+            matchHTML += `<li>File: ${match.filename}, Similarity: ${match.similarity}</li>`;
+          });
+          matchHTML += '</ul>';
+          document.getElementById('scanResult').innerHTML = matchHTML;
+          loadProfile();
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    // Handle credit request submission
+    document.getElementById('creditRequestForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      document.getElementById('requestMessage').textContent = '';
+      document.getElementById('dashboardError').textContent = '';
+      const requestedCredits = parseInt(document.getElementById('requestedCredits').value);
+      const res = await apiCall('/credits/request', 'POST', { requestedCredits });
+      if (res.error) {
+        document.getElementById('dashboardError').textContent = res.error;
+      } else {
+        document.getElementById('requestMessage').textContent = res.message;
+        if (!document.getElementById('adminPanel').classList.contains('hidden')) {
+          loadAdminData();
+        }
+      }
+    });
+
+    // Load Admin Data (both Analytics and Credit Requests)
+    async function loadAdminData() {
+      const res = await apiCall('/admin/analytics');
+      if (res.error) {
+        document.getElementById('dashboardError').textContent = res.error;
+      } else {
+        // Populate User Analytics Table
+        const userTbody = document.getElementById('userAnalyticsTable').querySelector('tbody');
+        userTbody.innerHTML = '';
+        res.analytics.users.forEach(user => {
+          const row = document.createElement('tr');
+          row.innerHTML = `<td>${user.username}</td>
+                           <td>${user.credits}</td>
+                           <td>${user.total_scans}</td>`;
+          userTbody.appendChild(row);
+        });
+        // Populate Credit Requests Table
+        const reqTbody = document.getElementById('creditRequestsTable').querySelector('tbody');
+        reqTbody.innerHTML = '';
+        res.analytics.credit_requests.forEach(req => {
+          const row = document.createElement('tr');
+          row.innerHTML = `<td>${req.request_id}</td>
+                           <td>${req.username}</td>
+                           <td>${req.requested_credits}</td>
+                           <td>${req.status}</td>
+                           <td>${req.status === 'approved' ? req.approved_credits : ''}</td>
+                           <td>
+                             ${req.status === 'pending' ? `<input type="number" min="1" id="add_${req.request_id}" placeholder="Additional Credits">
+                             <button onclick="approveRequest(${req.request_id})">Approve</button>
+                             <button onclick="denyRequest(${req.request_id})">Deny</button>` : 'N/A'}
+                           </td>`;
+          reqTbody.appendChild(row);
+        });
+      }
+    }
+
+    // Admin: Approve a credit request
+    async function approveRequest(requestId) {
+      const input = document.getElementById(`add_${requestId}`);
+      const additionalCredits = parseInt(input.value);
+      if (!additionalCredits || additionalCredits < 1) {
+        document.getElementById('dashboardError').textContent = 'Please enter a valid additional credit amount.';
+        return;
+      }
+      const res = await apiCall('/admin/credits/approve', 'POST', { requestId, additionalCredits });
+      if (res.error) {
+        document.getElementById('dashboardError').textContent = res.error;
+      } else {
+        document.getElementById('dashboardMessage').textContent = res.message;
+        loadAdminData();
+        loadProfile();
+      }
+    }
+
+    // Admin: Deny a credit request
+    async function denyRequest(requestId) {
+      const res = await apiCall('/admin/credits/deny', 'POST', { requestId });
+      if (res.error) {
+        document.getElementById('dashboardError').textContent = res.error;
+      } else {
+        document.getElementById('dashboardMessage').textContent = res.message;
+        loadAdminData();
+      }
+    }
+
+    // Logout: redirect to home
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      window.location.href = '/';
+    });
+
+    // Initialize view
+    showSection('home');
+  </script>
+</body>
+</html>
